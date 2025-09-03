@@ -1,8 +1,3 @@
-"""
-@author: wyourname
-同步代码运行器模板
-compile url: compile.365676.xyz
-"""
 import logging
 import asyncio
 import platform
