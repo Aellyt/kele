@@ -1,3 +1,5 @@
+# name: 联通助理积分
+# cron: 0 0 0 * * *
 import logging
 import asyncio
 import platform
