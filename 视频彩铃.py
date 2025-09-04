@@ -1,3 +1,5 @@
+# name: 视频彩铃抽奖
+# cron: 0 0 7 * * *
 import logging
 import asyncio
 import platform
