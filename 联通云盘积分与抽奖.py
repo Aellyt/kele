@@ -1,5 +1,5 @@
 # name: 联通云盘积分+抽奖
-# cron: 0 0 0 * * *
+# cron: 0 0 0,1 * * *
 import logging
 import asyncio
 import platform
