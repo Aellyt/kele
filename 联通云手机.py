@@ -1,3 +1,5 @@
+# name: 联通云手机
+# cron: 0 0 3 * * *
 import logging
 import asyncio
 import platform
