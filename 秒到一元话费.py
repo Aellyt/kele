@@ -1,3 +1,5 @@
+# name: 秒到一元话费
+# cron: 0 0 0 29 2 *
 import logging
 import asyncio
 import platform
