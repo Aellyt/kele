@@ -1,3 +1,5 @@
+# name: 小米钱包
+# cron: 0 0 1 * * *
 import logging
 import asyncio
 import platform
