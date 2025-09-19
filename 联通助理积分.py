@@ -1,5 +1,5 @@
 # name: 联通助理积分
-# cron: 0 30 0,1 * * *
+# cron: 0 30 4,14 * * *
 import logging
 import asyncio
 import platform
