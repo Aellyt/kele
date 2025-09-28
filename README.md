@@ -9,7 +9,7 @@
 
 拉库命令ql repo https://github.com/Aellyt/kele.git "" "" "" "main"
 
-有问题可[邮件](83313549@qq.com)联系
+有问题可[邮件](mailto:83313549@qq.com)联系
 
 ## 声明
 
