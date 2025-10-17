@@ -1,8 +1,6 @@
 ## 说明
 联通的一些脚本，环境变量chinaUnicomCookie。
 
-小米钱包，环境变量XIAOMIQIANBAO,passToken=xxxxxx; userId=xxxx;
-
 云手机报错先把依赖brotli，requests，aiohttp，pycryptodome装齐全。
 
 视频彩铃出现101报错提示Network unreachable，请使用联通网络运行脚本。
