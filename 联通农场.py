@@ -1,6 +1,5 @@
 # name: 联通农场
 # cron: 0 0 6,8 * * *
-"""
 import logging
 import asyncio
 import platform
