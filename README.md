@@ -5,8 +5,6 @@
 
 云手机报错先把依赖brotli，requests，aiohttp，pycryptodome装齐全。
 
-视频彩铃出现101报错提示Network unreachable，请使用联通网络运行脚本。
-
 建议跑两遍，一次可能会有报错遗漏任务
 
 拉库命令ql repo https://github.com/Aellyt/kele.git "" "" "" "main"
