@@ -1,6 +1,8 @@
 ## 说明
 联通的一些脚本，环境变量chinaUnicomCookie。
 
+尽量在家宽环境跑，不建议使用云服务器，尤其是某企鹅厂的，被联通屏蔽很多。
+
 云手机报错先把依赖brotli，requests，aiohttp，pycryptodome装齐全。
 
 视频彩铃出现101报错提示Network unreachable，请使用联通网络运行脚本。
