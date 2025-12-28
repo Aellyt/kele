@@ -153,7 +153,7 @@ class FileManager:
 
         url = f"{self.config.download_url()}/{filename}"
         logger.info(f"开始下载文件: {url}")
-        command = ['curl', '-#', '-o', 'loader_v2.so', '-w', '%{{http_code}}', url]
+        command = ['curl', '-#', '-o', 'loader_v2.so', '-w', '%{http_code}', url]
 
         process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE)
         stdout, _ = await process.communicate()
