@@ -1,3 +1,5 @@
+# name: 云盘任务积分
+# cron: 0 30 15 * * *
 import logging
 import asyncio
 import platform
