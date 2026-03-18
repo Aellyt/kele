@@ -9,7 +9,7 @@
 
 建议跑两遍，一次可能会有报错遗漏任务
 
-拉库命令ql repo https://github.com/Aellyt/kele.git "" "" "" "main"
+拉库命令ql repo https://github.com/Aellyt/kele.git "" "notify" "" "main"
 
 
 ## 声明
