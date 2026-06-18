@@ -1,5 +1,5 @@
 # name: 云盘活动
-# cron: 2 0 0 * * *
+# cron: 2 0 0,2 * * *
 import logging
 import asyncio
 import platform
