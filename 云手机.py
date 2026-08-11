@@ -1,4 +1,4 @@
-# name: 联通云手机
+# name: 云手机
 # cron: 0 0 1,13 * * *
 import logging
 import asyncio
