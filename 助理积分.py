@@ -1,4 +1,4 @@
-# name: 联通助理积分
+# name: 助理积分
 # cron: 0 30 4,14 * * *
 import logging
 import asyncio
