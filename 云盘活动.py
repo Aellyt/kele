@@ -1,5 +1,5 @@
 # name: yphd2
-# cron: 0 8 * * *
+# cron: 0 6 * * *
 import logging
 import asyncio
 import urllib.request
