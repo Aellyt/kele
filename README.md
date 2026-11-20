@@ -1,9 +1,7 @@
 ## 说明
 11.14由于配置错误，目前所有脚本都需要重新拉库后才能正常运行，首次下载后会出现异常，再次运行即可，如多次异常请提issues反馈环境情况
 
-一些脚本，环境变量chinaUnicomCookie
-
-阅读积分环境变量PHONE_NUM多账户用&分割，其余脚本具体看脚本内说明
+一些脚本，环境变量chinaUnicomCookie，其余脚本具体看脚本内说明
 
 chinaUnicomCookie不会抓包的可以使用工具获取[点击下载](https://www.sendgb.com/PvojbGjwsUq)
 
@@ -11,7 +9,7 @@ chinaUnicomCookie不会抓包的可以使用工具获取[点击下载](https://w
 
 测试环境为十个号，再多账号导致需要代理，自行解决，非必要不会修改支持。
 
-云手机报错先把依赖brotli，requests，aiohttp，pycryptodome，cryptography装齐全。
+报错先把依赖brotli，requests，aiohttp，pycryptodome，cryptography装齐全。
 
 建议跑两遍，一次可能会有报错遗漏任务
 
